@@ -1,0 +1,6 @@
+# propriétaires par fichier
+/src/safemail/db.py @malek-GaouaMalek
+/src/safemail/users.py @malek-GaouaMalek
+/src/safemail/password_strength.py @bouchra-gh
+/src/safemail/phishing.py @maroua-marouanadir
+/src/safemail/rule_based.py @imene-imenemoussaoui
