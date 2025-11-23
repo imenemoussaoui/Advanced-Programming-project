@@ -71,6 +71,17 @@ Module : Rule-Based Detector (Détection du phishing)
 Mise en place de règles simples (URLs, mots suspicieux, IP-links…)
 
 Score de suspicion
+work/imene/  # prototypes Imene (rules + scanner)
+
+- scanner.py             # scanner de vulnérabilités basé sur regex
+- scanner_ast.py         # scanner de vulnérabilités basé sur AST (analyse syntaxique)
+- scanner-fixtures/      # petits fichiers .py contenant des exemples vulnérables ou sûrs
+- test_scanner.py        # tests unitaires pour scanner.py
+- test_scanner_ast.py    # tests unitaires pour scanner_ast.py
+
+But : expérimenter un vrai scanner de vulnérabilités (eval, commandes shell, SQL injection,
+secrets, crypto faible, etc.) en complément du moteur de règles de phishing.
+
 
 
 
@@ -182,3 +193,4 @@ Règle d’or : rien dans work/ n’est considéré comme « prêt » — pour i
 Décision finale : “phishing” / “non-phishing”
 
 Explications des raisons de la détection   
+
