@@ -281,4 +281,57 @@ def is_html(text):
 
     
 
+
+
+
+# bch njbed les mots li ybynoli bli email fih louche
+def detect_suspicious_words(text):
+   
+
+    suspicious_words = [
+        # urgence et  action speciale
+        "urgent", "verify", "verification", "update", "confirm", "confirmation", "validate",
+        "password", "reset", "login", "credentials", "account suspended", "suspended", "locked",
+        "security alert", "unusual activity", "alert", "action required", "immediate attention",
+        "required", "response needed", "deadline",
+        
+        # payments terme 
+        "bank", "payment", "invoice", "overdue", "billing", "transaction", "refund", "credit card",
+        "paypal", "amazon", "apple id", "wire transfer", "account locked", "account compromised",
+        
+        # free offre , cadeau 
+        "winner", "prize", "gift", "free", "limited time", "exclusive offer", "congratulations", "claim your reward",
+        
+        # links
+        "click", "click here", "open link", "download", "attachment", "link below", "verify your account",
+        
+        # notice , quelque chose de important
+        "confidential", "important", "notice", "update your information", "security update",
+        
+        #  phishing themes
+        "new message", "message from admin", "support team", "customer service", "billing department",
+        "unauthorized", "violation", "compromised", "alert from", "account warning",
+        
+        # chweya taktik
+        "risk-free", "guaranteed", "no catch", "act now", "limited offer", "final notice",
+        "password expired", "reset your password", "security breach", "account on hold",
+        
+        # business , official terms
+        "document", "file", "request", "review", "project files", "proposal", "contract",
+        "statement", "order confirmation", "shipment", "delivery status",
+        
+        # other
+        "fake", "spoof", "scan", "update required", "service alert", "system alert",
+    ]
+
+    found = []
+
+    # search all suspicious words in email
+    for word in suspicious_words:
+        if word in text:
+             # ida l9ahom zidhom l liste
+            found.append(word)
+
+    return len(found), found
+
  
