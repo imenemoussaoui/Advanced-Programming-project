@@ -12,11 +12,102 @@
 import re
 import base64
 import quopri
+import requests   ### >>> ADDED for VirusTotal <<<
+import time
+from urllib.parse import urljoin
+
+
+# hna bch nconicty m3a virus total api
+VT_API_BASE = "https://www.virustotal.com/api/v3/"
+VT_API_KEY = "63c7fab5b0c361587ed58f5b71305bccf146eb6b258ca8bc4fb1a02f3b0b2e3c"
+
+
+
+
+
+
+
+
+
+
+def vt_submit_and_get_report(url, api_key=VT_API_KEY, poll_interval=3, timeout=60):
+    """
+    Sends a URL to VirusTotal and retrieves the final report.
+    Returns a dictionary:
+    {
+        malicious_count: int,
+        total_scans: int,
+        malicious_engines: list,
+        analysis_url: str,
+    }
+    """
+    headers = {"x-apikey": api_key}
+
+    # --- Step 1: SUBMIT the URL ---
+    submit_endpoint = urljoin(VT_API_BASE, "urls")
+    try:
+        r = requests.post(submit_endpoint, data={"url": url}, headers=headers, timeout=15)
+    except Exception as e:
+        return {"error": f"submit error: {e}"}
+
+    # If successful, get analysis id
+    if r.status_code in (200, 201):
+        j = r.json()
+        analysis_id = j.get("data", {}).get("id")
+        if not analysis_id:
+            return {"error": "no analysis id found", "raw": j}
+    else:
+        return {"error": "submit failed", "status": r.status_code, "raw": r.text}
+
+    # --- Step 2: POLLING until "completed" ---
+    analysis_endpoint = urljoin(VT_API_BASE, f"analyses/{analysis_id}")
+    start = time.time()
+
+    while True:
+        s = requests.get(analysis_endpoint, headers=headers, timeout=15)
+
+        if s.status_code == 200:
+            js = s.json()
+            status = js["data"]["attributes"]["status"]
+
+            # If analysis finished → parse result
+            if status == "completed":
+                results = js["data"]["attributes"]["results"]
+
+                malicious_engines = []
+                total = 0
+
+                # Count malicious detections
+                for engine, info in results.items():
+                    total += 1
+                    category = info.get("category", "")
+                    if category.lower() in ("malicious", "suspicious", "phishing"):
+                        malicious_engines.append({
+                            "engine": engine,
+                            "category": category,
+                            "result": info.get("result")
+                        })
+
+                return {
+                    "malicious_count": len(malicious_engines),
+                    "total_scans": total,
+                    "malicious_engines": malicious_engines,
+                    "analysis_url": f"https://www.virustotal.com/gui/url/{analysis_id}/detection"
+                }
+
+            # Still waiting
+            if time.time() - start > timeout:
+                return {"error": "timeout waiting for report"}
+
+            time.sleep(poll_interval)
+
+        else:
+            return {"error": f"error fetching analysis {s.status_code}"}
+
+
 
 
 #hna la fonction principale li ra7 t3yt l9a3 fonction testi email
-def teste_email(raw_text):
- print("g")
 
 def find_url_from_text(email):
     """
@@ -78,6 +169,11 @@ def convertir_str(email):
       return email.decode('utf-8', errors='replace')
    # sinon rah deja str bla mydir wlo
    return email
+
+
+
+
+
 
 
 # email dymen ykon fih headears body
@@ -334,4 +430,54 @@ def detect_suspicious_words(text):
 
     return len(found), found
 
- 
+
+
+
+
+
+
+
+
+def teste_email(raw_text):
+    print("\n=== TESTING EMAIL ===")
+
+    # STEP 1: decode + clean text
+    parsed = decodé_eliminé_normalizé(raw_text)
+
+    clean_text = parsed["clean_text"]
+    print("\n[OK] Email normalized\n")
+
+    # STEP 2: extract URLs
+    urls = find_url_from_text(clean_text)
+    print(f"[OK] Found {len(urls)} URLs")
+
+    # STEP 3: check suspicious words
+    sw_count, sw_list = detect_suspicious_words(parsed["lower_text"])
+
+    # STEP 4: CALL VIRUSTOTAL FOR EACH URL
+    vt_results = []   ### >>> ADDED <<<
+
+    for url in urls:
+        print(f"\n[VT] Checking URL: {url}")
+        report = vt_submit_and_get_report(url)
+        vt_results.append({ "url": url, "report": report })
+
+    # RETURN FULL REPORT
+    return {
+        "urls": urls,
+        "suspicious_words_count": sw_count,
+        "suspicious_words_found": sw_list,
+        "vt_results": vt_results ### >>> ADDED <<<
+    }
+
+
+
+
+
+
+
+
+
+
+
+
