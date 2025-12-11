@@ -14,47 +14,133 @@ class EmailRequest(BaseModel):
     email_id: int
     raw_text: str
 
-def classify_email(email_id, raw_text):
-    # Step 1: Analyze email
-    analysis = teste_email(raw_text)
 
-    # Step 2: Determine if suspicious
-    is_suspicious = False
-    reason = ""
 
-    for vt in analysis["vt_results"]:
-        report = vt["report"]
-        if report.get("malicious_count", 0) > 0:
-            is_suspicious = True
-            reason += f"Malicious URL detected: {vt['url']}. "
-
-    if analysis["suspicious_words_count"] >= 2:
-        is_suspicious = True
-        reason += f"Suspicious words found: {', '.join(analysis['suspicious_words_found'])}. "
-
-    if len(analysis["urls"]) > 3:
-        is_suspicious = True
-        reason += "Too many URLs in email. "
-
-    # Step 3: Update database
+def analyze_attachments(email_id):
     conn = get_db_connection()
     cursor = conn.cursor()
 
+    cursor.execute("""
+        SELECT filename, content_type, size_bytes, verdict, severity, score
+        FROM attachments
+        WHERE email_id = ?
+    """, email_id)
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    if not rows:
+        return {
+            "count": 0,
+            "dangerous": False,
+            "report": "",
+            "reasons": []
+        }
+
+    report_lines = []
+    reasons = []
+    email_is_dangerous = False
+
+    for file in rows:
+        filename, ctype, size, verdict, severity, score = file
+
+        line = f"- **{filename}** ({ctype}, {size} bytes) — Verdict: **{verdict}**"
+
+        # Analyse du verdict
+        if verdict is None:
+            line += " → Unknown"
+            reasons.append(f"Attachment '{filename}' has unknown verdict.")
+            email_is_dangerous = True
+
+        elif verdict.upper() == "MALICIOUS":
+            line += " → ⚠️ Malicious file detected"
+            reasons.append(f"Malicious attachment: {filename}")
+            email_is_dangerous = True
+
+        elif verdict.upper() == "SUSPICIOUS":
+            line += " → Suspicious file"
+            reasons.append(f"Suspicious attachment: {filename}")
+            email_is_dangerous = True
+
+        elif verdict.upper() == "CLEAN":
+            line += " → Clean"
+
+        report_lines.append(line)
+
+    final_report = "\n".join(report_lines)
+
+    return {
+        "count": len(rows),
+        "dangerous": email_is_dangerous,
+        "report": final_report,
+        "reasons": reasons
+    }
+
+
+
+
+def classify_email(email_id, raw_text):
+    """
+    Analyse un email, ses URLs, mots suspects et pièces jointes,
+    met à jour la BDD et génère un rapport professionnel.
+    """
+
+    # === 1. Analyse de l'email ===
+    email_analysis = teste_email(raw_text)
+    
+    # === 2. Analyse des attachments existants dans la BDD ===
+    attach_analysis = analyze_attachments(email_id)
+
+    # === 3. Détermination de la suspicion ===
+    is_suspicious = False
+    reasons = []
+
+    # 3.1 Attachments dangereux
+    if attach_analysis["dangerous"]:
+        is_suspicious = True
+        reasons.append("Attachment(s) flagged as suspicious or malicious.")
+
+    # 3.2 URLs malveillantes
+    malicious_urls = []
+    for vt in email_analysis["vt_results"]:
+        report = vt["report"]
+        if report.get("malicious_count", 0) > 0:
+            is_suspicious = True
+            malicious_urls.append(vt["url"])
+    if malicious_urls:
+        reasons.append(f"Malicious URL(s) detected: {', '.join(malicious_urls)}")
+
+    # 3.3 Mots suspects
+    if email_analysis["suspicious_words_count"] >= 2:
+        is_suspicious = True
+        reasons.append(f"Suspicious words detected: {', '.join(email_analysis['suspicious_words_found'])}")
+
+    # 3.4 Trop de liens
+    if len(email_analysis["urls"]) > 3:
+        is_suspicious = True
+        reasons.append("Email contains excessive number of URLs.")
+
+    # === 4. Mise à jour de la BDD ===
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    now = datetime.now()
     if is_suspicious:
+        # Mettre en quarantaine
         cursor.execute("""
             UPDATE emails_text
             SET processed = 1,
                 is_quarantined = 1,
                 quarantined_at = ?
             WHERE id = ?
-        """, datetime.now(), email_id)
+        """, now, email_id)
 
         cursor.execute("""
             INSERT INTO quarantine(email_id, reason, quarantined_by)
             VALUES (?, ?, 'system')
-        """, email_id, reason)
-
+        """, email_id, "; ".join(reasons))
     else:
+        # Pas de quarantaine
         cursor.execute("""
             UPDATE emails_text
             SET processed = 1,
@@ -65,12 +151,18 @@ def classify_email(email_id, raw_text):
     conn.commit()
     conn.close()
 
-    return {
+    # === 5. Rapport détaillé pour frontend / API ===
+    detailed_report = {
         "email_id": email_id,
         "is_suspicious": is_suspicious,
-        "reason": reason,
-        "analysis": analysis
+        "reasons": reasons,
+        "urls": email_analysis["urls"],
+        "suspicious_words": email_analysis["suspicious_words_found"],
+        "attachments": attach_analysis["report"]
     }
+
+    return detailed_report
+
 
 
 @app.post("/analyze_email")

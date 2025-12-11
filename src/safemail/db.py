@@ -10,7 +10,7 @@ def get_db_connection():
     """
 
     server = "localhost"
-    database = "python"   
+    database = "advanced_python"   
     username = "sa"        
     password = "maroua"    
 

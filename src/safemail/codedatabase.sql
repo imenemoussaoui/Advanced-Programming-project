@@ -3,9 +3,6 @@ GO
 
 
 
-
-
-
 CREATE TABLE users (
   id INT IDENTITY(1,1) PRIMARY KEY,
   username NVARCHAR(100) NOT NULL UNIQUE, -- username chosen by user
@@ -72,3 +69,23 @@ CREATE TABLE quarantine (
   released INTEGER DEFAULT 0, -- 1 if email was later released from quarantine
   released_at DATETIME        -- timestamp when email was released
 );
+
+
+
+
+
+
+ALTER TABLE emails_text
+ADD attachments_extracted INT DEFAULT 0;
+
+ALTER TABLE attachments
+ADD verdict NVARCHAR(20) NULL,
+    severity NVARCHAR(20) NULL,
+    score INT NULL,
+    risk_summary NVARCHAR(MAX) NULL,
+    confidence FLOAT NULL,
+    vt_malicious INT NULL,
+    vt_suspicious INT NULL,
+    vt_undetected INT NULL,
+    vt_harmless INT NULL,
+    scanned_at DATETIME NULL;
