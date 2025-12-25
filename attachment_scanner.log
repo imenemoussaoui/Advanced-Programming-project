@@ -1,0 +1,1 @@
+2025-12-25 14:34:30,201 [INFO] Scanned attachment 'virus.exe' | type=exe | size=16 | verdict=malicious | score=90 | reasons=executable_file,very_small_file
