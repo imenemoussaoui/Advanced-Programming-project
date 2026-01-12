@@ -1,0 +1,19 @@
+From: test@example.com
+To: you@example.com
+Subject: Test attachment
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary=ABC
+
+--ABC
+Content-Type: text/plain
+
+Hello, this is a test.
+
+--ABC
+Content-Disposition: attachment; filename="virus.exe"
+Content-Type: application/octet-stream
+Content-Transfer-Encoding: base64
+
+TVpGQUtFQklOQVJZREFUQQ==
+
+--ABC--
