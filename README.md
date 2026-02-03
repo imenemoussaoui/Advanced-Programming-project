@@ -325,22 +325,6 @@ Validation des entrées utilisateur
 
 Isolation des données par utilisateur
 
-📁 Structure des Fichiers
-text
-safemail/
-├── app.py                    # Application FastAPI principale
-├── db.py                     # Connexion base de données
-├── users.py                  # Gestion des utilisateurs
-├── imap_fetcher.py          # Récupération emails IMAP
-├── phishing.py              # Analyse anti-phishing
-├── scheduler.py             # Tâches planifiées
-├── static/                  # Fichiers frontend
-│   ├── login.html
-│   ├── dashboard.html
-│   ├── inbox.html
-│   └── quarantine.html
-└── requirements.txt         # Dépendances Pytho
-
 
 
 

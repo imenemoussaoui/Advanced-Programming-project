@@ -1,0 +1,22 @@
+[33me63347c[m[33m ([m[1;36mHEAD[m[33m)[m HEAD@{0}: pull origin main --rebase (pick): Add code
+[33mbc02e31[m HEAD@{1}: pull origin main --rebase (pick): Add code
+[33m638da3c[m[33m ([m[1;31morigin/main[m[33m)[m HEAD@{2}: pull origin main --rebase (start): checkout 638da3c39d289c56e3c9118556bdd00bca6f3bb0
+[33mb56ff29[m[33m ([m[1;32mmaroua-phishing[m[33m)[m HEAD@{3}: commit: final
+[33mfc90dfc[m[33m ([m[1;31morigin/maroua-phishing[m[33m)[m HEAD@{4}: checkout: moving from maroua-phishing to maroua-phishing
+[33mfc90dfc[m[33m ([m[1;31morigin/maroua-phishing[m[33m)[m HEAD@{5}: commit: fin
+[33m5760510[m HEAD@{6}: checkout: moving from maroua-phishing to maroua-phishing
+[33m5760510[m HEAD@{7}: commit: Add code
+[33mc50d17d[m HEAD@{8}: checkout: moving from maroua-phishing to maroua-phishing
+[33mc50d17d[m HEAD@{9}: commit: Add code
+[33m311276c[m HEAD@{10}: checkout: moving from maroua-phishing to maroua-phishing
+[33m311276c[m HEAD@{11}: checkout: moving from maroua-phishing to maroua-phishing
+[33m311276c[m HEAD@{12}: commit: Add code
+[33mdc8d734[m[33m ([m[1;31morigin/malek-database[m[33m, [m[1;31morigin/imene-rules[m[33m, [m[1;31morigin/bouchra-password[m[33m, [m[1;32mmalek-database[m[33m, [m[1;32mmain[m[33m, [m[1;32mimene-rules[m[33m, [m[1;32mbouchra-password[m[33m)[m HEAD@{13}: checkout: moving from imene-rules to maroua-phishing
+[33mdc8d734[m[33m ([m[1;31morigin/malek-database[m[33m, [m[1;31morigin/imene-rules[m[33m, [m[1;31morigin/bouchra-password[m[33m, [m[1;32mmalek-database[m[33m, [m[1;32mmain[m[33m, [m[1;32mimene-rules[m[33m, [m[1;32mbouchra-password[m[33m)[m HEAD@{14}: checkout: moving from maroua-phishing to imene-rules
+[33mdc8d734[m[33m ([m[1;31morigin/malek-database[m[33m, [m[1;31morigin/imene-rules[m[33m, [m[1;31morigin/bouchra-password[m[33m, [m[1;32mmalek-database[m[33m, [m[1;32mmain[m[33m, [m[1;32mimene-rules[m[33m, [m[1;32mbouchra-password[m[33m)[m HEAD@{15}: checkout: moving from bouchra-password to maroua-phishing
+[33mdc8d734[m[33m ([m[1;31morigin/malek-database[m[33m, [m[1;31morigin/imene-rules[m[33m, [m[1;31morigin/bouchra-password[m[33m, [m[1;32mmalek-database[m[33m, [m[1;32mmain[m[33m, [m[1;32mimene-rules[m[33m, [m[1;32mbouchra-password[m[33m)[m HEAD@{16}: checkout: moving from malek-database to bouchra-password
+[33mdc8d734[m[33m ([m[1;31morigin/malek-database[m[33m, [m[1;31morigin/imene-rules[m[33m, [m[1;31morigin/bouchra-password[m[33m, [m[1;32mmalek-database[m[33m, [m[1;32mmain[m[33m, [m[1;32mimene-rules[m[33m, [m[1;32mbouchra-password[m[33m)[m HEAD@{17}: checkout: moving from main to malek-database
+[33mdc8d734[m[33m ([m[1;31morigin/malek-database[m[33m, [m[1;31morigin/imene-rules[m[33m, [m[1;31morigin/bouchra-password[m[33m, [m[1;32mmalek-database[m[33m, [m[1;32mmain[m[33m, [m[1;32mimene-rules[m[33m, [m[1;32mbouchra-password[m[33m)[m HEAD@{18}: checkout: moving from main to main
+[33mdc8d734[m[33m ([m[1;31morigin/malek-database[m[33m, [m[1;31morigin/imene-rules[m[33m, [m[1;31morigin/bouchra-password[m[33m, [m[1;32mmalek-database[m[33m, [m[1;32mmain[m[33m, [m[1;32mimene-rules[m[33m, [m[1;32mbouchra-password[m[33m)[m HEAD@{19}: commit: chore: initial project structure and skeleton modules
+[33m3b931a0[m HEAD@{20}: commit: Clean repository
+[33m8a637ae[m HEAD@{21}: commit (initial): Premier commit
