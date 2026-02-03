@@ -84,23 +84,21 @@ Advanced-Programming-project/
 │   └── init_db.py
 ├── src/
 │   └── safemail/
-│       ├── __init__.py
-│       ├── cli.py
-│       ├── database/
-│       │   ├── __init__.py
-│       │   └── db_manager.py
-│       ├── users/
-│       │   ├── __init__.py
-│       │   └── users.py
-│       ├── password_strength/
-│       │   ├── __init__.py
-│       │   └── strength_checker.py
-│       ├── phishing/
-│       │   ├── __init__.py
-│       │   └── phishing_detector.py
-│       └── rule_based/
-│           ├── __init__.py
-│           └── rule_engine.py
+│  
+│       ── users.py
+│        ── attachment_scanner.py
+│        ── attachment_worker.py
+         ── app.py                    # Application FastAPI principale
+         ── db.py                     # Connexion base de données
+         ── users.py                  # Gestion des utilisateurs
+         ── imap_fetcher.py          # Récupération emails IMAP
+         ── phishing.py              # Analyse anti-phishing    
+         ── scheduler.py             # Tâches planifiées
+├── static/                  # Fichiers frontend
+│   ├── login.html
+│   ├── dashboard.html
+│   ├── inbox.html
+│   └── quarantine.html
 ├── tests/
 │   ├── test_db.py
 │   ├── test_users.py
@@ -139,11 +137,6 @@ __init__.py : rend le package importable.
 cli.py : interface en ligne de commande (menu principal qui appelle les modules).
 But : point d’entrée utilisateur (ex : python -m src.safemail.cli).
 
-src/safemail/database/
-
-db_manager.py : wrapper pour sqlite3 (connexion, exécution de requêtes, migrations simples).
-Responsable : Malek.
-But : centraliser accès DB et éviter duplication.
 
 src/safemail/users/
 
@@ -161,7 +154,8 @@ src/safemail/phishing/
 phishing_detector.py : heuristiques pour détecter phishing (mots clefs, URL mismatches, pièces jointes).
 Responsable : Maroua.
 
-src/safemail/rule_based/
+src/safemail/attachment_scanner/
+src/safemail/attachment_worker/
 
 rule_engine.py : moteur qui applique des règles configurables (YAML/JSON) et retourne les résultats détaillés.
 Responsable : Imene.
@@ -174,10 +168,188 @@ But : garantir que chaque PR garde la base stable (coverage basique).
 
 work/
 
-Dossiers personnels pour prototypes et brouillons (non intégrés directement en production).
-Ex : work/malek/README.md décrit l’état du prototype.
-Règle d’or : rien dans work/ n’est considéré comme « prêt » — pour intégrer il faut ouvrir une PR et déplacer le code vers src/safemail/....
 
 
-Décision finale : “phishing” / “non-phishing”
+📧 SafeMail - Détecteur de Phishing Intelligent
+📋 Description du Projet
+SafeMail est une application web intelligente de détection de phishing par email qui permet aux utilisateurs de connecter leur boîte Gmail, d'analyser automatiquement leurs emails, et d'identifier les tentatives de phishing grâce à une analyse multi-couches.
+
+🎯 Fonctionnalités Principales
+🔐 Gestion des Utilisateurs
+Inscription sécurisée avec hachage des mots de passe
+
+Connexion personnalisée avec tableau de bord individuel
+
+Gestion de compte IMAP par utilisateur
+
+📩 Intégration Gmail IMAP
+Connexion sécurisée aux comptes Gmail via IMAP
+
+Récupération automatique des emails (toutes les 5 heures)
+
+Support du mot de passe d'application Google pour une sécurité maximale
+
+🔍 Analyse Anti-Phishing Avancée
+Détection d'URLs malveillantes via VirusTotal API
+
+Analyse des pièces jointes avec scanning antivirus
+
+Détection de mots suspects dans le contenu des emails
+
+Classification intelligente basée sur plusieurs indicateurs
+
+Mise en quarantaine automatique des emails suspects
+
+📊 Interface Utilisateur
+Tableau de bord avec statistiques
+
+Boîte de réception organisée
+
+Section quarantaine pour emails suspects
+
+Détails d'analyse complets pour chaque email
+
+🚀 Comment Commencer
+Étape 1 : Création de Compte Utilisateur
+Accédez à la page d'inscription
+
+Entrez votre nom d'utilisateur, email et mot de passe
+
+Votre compte est automatiquement créé avec un profil IMAP vide
+
+Étape 2 : Configuration du Compte Gmail IMAP
+⚠️ Problème IMAP résolu : Plus besoin d'activer manuellement IMAP dans Gmail
+
+🔐 Configuration de la Double Authentification Google
+Accédez à : myaccount.google.com
+
+Connectez-vous avec votre compte Gmail
+
+Allez dans : Sécurité → Validation en 2 étapes
+
+Activez la double authentification en suivant les étapes :
+
+Entrez votre mot de passe
+
+Ajoutez votre numéro de téléphone
+
+Validez avec le code SMS
+
+🔑 Génération du Mot de Passe d'Application
+Retournez à : Sécurité → Mots de passe des applications
+
+Sélectionnez :
+
+App : Mail
+
+Device : Windows Computer
+
+Cliquez sur : "Générer"
+
+Copiez immédiatement le mot de passe affiché (ex: abcd efgh ijkl mnop)
+
+⚙️ Configuration dans SafeMail
+Dans votre tableau de bord SafeMail, ajoutez votre compte IMAP
+
+Utilisez :
+
+Email : votre adresse Gmail complète
+
+Mot de passe : le mot de passe d'application généré (pas votre mot de passe Gmail normal)
+
+Étape 3 : Utilisation de l'Application
+📥 Boîte de Réception (Inbox)
+Bouton "Fetch Gmail" : Récupère les nouveaux emails
+
+Liste des emails : Affiche tous vos emails avec statut
+
+Indicateurs visuels :
+
+✅ Safe : Email normal
+
+🛑 Quarantined : Email suspect mis en quarantaine
+
+🔍 Analyse d'Email
+Cliquez sur "Details" à côté d'un email
+
+L'application analyse automatiquement :
+
+URLs : Vérification via VirusTotal
+
+Pièces jointes : Scanning antivirus
+
+Mots-clés suspects : Détection de langage de phishing
+
+Rapport d'analyse affiché avec :
+
+Statut de suspicion
+
+Raisons de la classification
+
+Liste des URLs détectées
+
+Analyse des pièces jointes
+
+🛑 Section Quarantaine
+Accès rapide depuis le tableau de bord
+
+Liste des emails bloqués avec raisons
+
+Possibilité de consulter les emails mis en quarantaine
+
+🔧 Architecture Technique
+🗄️ Base de Données (SQL Server)
+Utilisateurs : Informations de connexion
+
+Comptes IMAP : Configuration par utilisateur
+
+Emails : Stockage des emails récupérés
+
+Quarantaine : Emails suspects bloqués
+
+Pièces jointes : Fichiers attachés analysés
+
+🔗 API Integration
+VirusTotal API : Analyse d'URLs et fichiers
+
+IMAP Gmail : Récupération des emails
+
+FastAPI : Backend RESTful
+
+🛡️ Sécurité
+Hachage SHA256 des mots de passe
+
+Tokens d'application Google pour IMAP
+
+Validation des entrées utilisateur
+
+Isolation des données par utilisateur
+
+📁 Structure des Fichiers
+text
+safemail/
+├── app.py                    # Application FastAPI principale
+├── db.py                     # Connexion base de données
+├── users.py                  # Gestion des utilisateurs
+├── imap_fetcher.py          # Récupération emails IMAP
+├── phishing.py              # Analyse anti-phishing
+├── scheduler.py             # Tâches planifiées
+├── static/                  # Fichiers frontend
+│   ├── login.html
+│   ├── dashboard.html
+│   ├── inbox.html
+│   └── quarantine.html
+└── requirements.txt         # Dépendances Pytho
+
+
+
+
+
+
+
+
+
+
+
+
 

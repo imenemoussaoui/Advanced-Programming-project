@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Inbox</title>
+
+<style>
+
+body{
+    font-family: Arial, Helvetica, sans-serif;
+    background:#eef2f7;
+    padding:25px;
+}
+
+h2{
+    margin-bottom:20px;
+}
+
+/* ===== TABLE ===== */
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    background:white;
+    border-radius:8px;
+    overflow:hidden;
+    box-shadow:0 2px 8px rgba(0,0,0,0.08);
+}
+
+th{
+    background:#2c3e50;
+    color:white;
+    padding:12px;
+    font-size:14px;
+    text-align:left;
+}
+
+td{
+    padding:10px;
+    border-bottom:1px solid #eee;
+    font-size:13px;
+}
+
+tr:hover{
+    background:#f5f8fc;
+    cursor:pointer;
+}
+
+/* ===== STATUS BADGES ===== */
+
+.badge{
+    padding:4px 8px;
+    border-radius:12px;
+    font-size:12px;
+    font-weight:bold;
+}
+
+.safe{
+    background:#d4edda;
+    color:#155724;
+}
+
+.quarantine{
+    background:#ffe5b4;
+    color:#8a4b00;
+}
+
+/* ===== DETAILS PANEL ===== */
+
+#details{
+    margin-top:25px;
+    background:white;
+    padding:18px;
+    border-radius:10px;
+    box-shadow:0 2px 8px rgba(0,0,0,0.08);
+}
+
+#details h3{
+    margin-top:0;
+}
+
+.label{
+    font-weight:bold;
+    color:#444;
+}
+
+.mail-body{
+    background:#fafafa;
+    padding:12px;
+    border-radius:6px;
+    border:1px solid #eee;
+    white-space:pre-wrap;
+    max-height:300px;
+    overflow:auto;
+}
+
+.small{
+    font-size:12px;
+    color:#666;
+}
+
+</style>
+</head>
+
+<body>
+
+    <h2>Mailbox</h2>
+    <button onclick="fetchEmails()">📥 Fetch Gmail</button>
+
+
+<h2>📥 Inbox Emails</h2>
+
+<table id="mailTable">
+<thead>
+<tr>
+    <th>ID</th>
+    <th>Subject</th>
+    <th>From</th>
+    <th>Date</th>
+    <th>Status</th>
+     <th>Action</th>
+</tr>
+</thead>
+<tbody id="tbody">
+<tr><td colspan="5">Loading...</td></tr>
+</tbody>
+</table>
+
+
+<div id="details">
+<h3>📄 Email Details</h3>
+Click a row to view email details
+</div>
+
+
+<script>
+
+/* =========================
+   LOAD EMAIL LIST
+========================= */
+async function fetchEmails(){
+    let user_id = localStorage.getItem("user_id");
+    if(!user_id){
+        alert("Please login first!");
+        return;
+    }
+
+    // Récupérer le compte IMAP
+    let r1 = await fetch(`/imap/accounts/${user_id}`);
+    let accs = await r1.json();
+    if(accs.length == 0){
+        alert("No IMAP account found for this user");
+        return;
+    }
+
+    // Fetch emails via IMAP
+    await fetch(`/imap/fetch/${accs[0].id}`, {method:"POST"});
+    await loadEmails();
+}
+
+
+async function load(){
+
+    let uid = localStorage.getItem("user_id");
+    if(!uid){
+        alert("Login first");
+        return;
+    }
+
+    // ✅ FETCH NON MODIFIÉ
+    let r = await fetch(`/emails/user/${uid}`);
+    let data = await r.json();
+
+    console.log("EMAIL LIST:", data);
+
+    let tbody = document.getElementById("tbody");
+    tbody.innerHTML="";
+
+    if(data.length === 0){
+        tbody.innerHTML = "<tr><td colspan=5>No emails found</td></tr>";
+        return;
+    }
+
+    data.forEach(m=>{
+
+        let tr = document.createElement("tr");
+
+       tr.innerHTML = `
+    <td>${m.id}</td>
+    <td>${m.subject || "(no subject)"}</td>
+    <td>${m.from_address}</td>
+    <td>${m.date_received || "-"}</td>
+    <td>
+        <span class="badge ${m.is_quarantined ? 'quarantine':'safe'}">
+            ${m.is_quarantined ? "Quarantined":"Safe"}
+        </span>
+    </td>
+    <td>
+        <button onclick="show(${m.id}); event.stopPropagation();">
+            Details
+        </button>
+    </td>
+`;
+
+
+        tr.onclick = ()=>show(m.id);
+
+        tbody.appendChild(tr);
+    });
+}
+
+
+/* =========================
+   SHOW EMAIL DETAIL
+========================= */
+
+async function show(id){
+    try {
+        // 1. Récupérer les détails de l'email
+        let r = await fetch(`/emails/detail/${id}`);
+        if (!r.ok) {
+            throw new Error(`HTTP error! status: ${r.status}`);
+        }
+        let e = await r.json();
+        
+        console.log("DETAIL:", e);
+
+        // 2. Analyser l'email (optionnel)
+        let report = null;
+        try {
+            let classifyRes = await fetch('/analyze_email', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    email_id: id,
+                    raw_text: e.text_body || ""
+                })
+            });
+            
+            if (classifyRes.ok) {
+                report = await classifyRes.json();
+            }
+        } catch (error) {
+            console.warn("Phishing analysis failed:", error);
+        }
+
+        // 3. Afficher les détails
+        let html = `
+            <h3>${e.subject || "(no subject)"}</h3>
+            
+            <p><span class="label">From:</span> ${e.from_address || "-"}</p>
+            <p><span class="label">To:</span> ${e.to_addresses || "-"}</p>
+            <p><span class="label">Date:</span> ${e.date_received || "Unknown"}</p>
+            
+            <p><span class="label">Status:</span>
+                <span class="badge ${e.is_quarantined ? 'quarantine' : 'safe'}">
+                    ${e.is_quarantined ? "Quarantined" : "Safe"}
+                </span>
+            </p>
+            
+            <p><span class="label">Suspicious:</span>
+                ${e.is_suspicious ? "⚠️ Yes" : "No"}
+            </p>
+            
+            <p><span class="label">Reasons:</span>
+                ${(e.reasons && e.reasons.length)
+                    ? e.reasons.join(", ")
+                    : "None"}
+            </p>
+            
+            <p><span class="label">Attachments:</span>
+                ${e.attachments || "None"}
+            </p>`;
+
+        // Ajouter le rapport d'analyse si disponible
+        if (report) {
+            html += `
+                <hr>
+                <h3>📊 Phishing Analysis Report</h3>
+                <p><strong>Suspicious:</strong> ${report.is_suspicious ? "⚠️ Yes" : "No"}</p>
+                <p><strong>Reasons:</strong> ${report.reasons && report.reasons.length ? report.reasons.join(", ") : "None"}</p>
+                <p><strong>Detected URLs:</strong> ${report.urls && report.urls.length ? report.urls.join(", ") : "None"}</p>
+                <p><strong>Suspicious Words:</strong> ${report.suspicious_words && report.suspicious_words.length ? report.suspicious_words.join(", ") : "None"}</p>
+            `;
+        }
+
+        html += `
+            <hr>
+            <div class="label">Body:</div>
+            <div class="mail-body">${e.text_body || "(empty)"}</div>
+        `;
+
+        document.getElementById("details").innerHTML = html;
+        
+    } catch (error) {
+        console.error("Error loading email details:", error);
+        document.getElementById("details").innerHTML = `
+            <h3>❌ Error</h3>
+            <p>Could not load email details: ${error.message}</p>
+        `;
+    }
+}
+
+
+/* ========================= */
+
+load();
+
+</script>
+
+</body>
+</html>

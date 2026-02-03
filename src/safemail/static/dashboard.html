@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Mailbox Dashboard</title>
+
+<style>
+body {
+    font-family: Arial;
+    background:#f0f2f5;
+    padding:40px;
+}
+
+.big-btn {
+    display:block;
+    width:260px;
+    padding:20px;
+    margin:20px 0;
+    font-size:18px;
+    font-weight:bold;
+    border:none;
+    border-radius:10px;
+    cursor:pointer;
+    color:white;
+}
+
+.inbox { background:#4CAF50; }
+.quarantine { background:#FF9800; }
+
+.big-btn:hover { opacity:0.85; }
+</style>
+</head>
+
+<body>
+
+<h2>Mailbox Dashboard</h2>
+
+<button class="big-btn inbox" onclick="goInbox()">
+📥 Open Inbox
+</button>
+
+<button class="big-btn quarantine" onclick="goQuarantine()">
+🛑 Open Quarantine
+</button>
+
+<script>
+function goInbox(){
+    window.location.href = "/static/inbox.html";
+}
+
+function goQuarantine(){
+    window.location.href = "/static/quarantine.html";
+}
+</script>
+
+</body>
+</html>

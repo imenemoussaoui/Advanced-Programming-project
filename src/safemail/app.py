@@ -1,19 +1,79 @@
-from fastapi import FastAPI, HTTPException
+
+from fastapi import FastAPI, HTTPException, Body
 from pydantic import BaseModel
 from datetime import datetime
 
-# Import your existing phishing functions
-from .phishing import teste_email
+from safemail.db import get_db_connection
+from safemail.users import create_user_db, verify_user_db,verify_password
+from safemail.imap_fetcher import fetch_gmail_imap
+from safemail.phishing import teste_email
 
-# Import the DB connection
-from .db import get_db_connection
+from fastapi.staticfiles import StaticFiles
+
+from fastapi.responses import FileResponse
+
+from pydantic import BaseModel
+
+
+
 
 app = FastAPI(title="Email Phishing Detector API")
+
+import safemail.scheduler
+app.mount("/static", StaticFiles(directory="safemail/static"), name="static")
+
+
+
+
 
 class EmailRequest(BaseModel):
     email_id: int
     raw_text: str
 
+
+
+class UserCreate(BaseModel):
+    username: str
+    email: str
+    password: str
+
+class UserLogin(BaseModel):
+    username: str
+    password: str
+
+
+
+
+class AddImapAccount(BaseModel):
+    user_id: int
+    gmail: str
+    app_password: str
+
+@app.post("/imap/add")
+def add_imap_account(account: AddImapAccount):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Vérifier si user existe
+    cursor.execute("SELECT id FROM users WHERE id = ?", (account.user_id,))
+    if not cursor.fetchone():
+        conn.close()
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Ajouter IMAP account lié au user
+    cursor.execute("""
+        INSERT INTO imap_accounts (user_id, account_email, app_password_encrypted)
+        VALUES (?,?,?)
+    """, (account.user_id, account.gmail, account.app_password))
+    
+    conn.commit()
+    conn.close()
+    
+    return {"status": "IMAP account added"}
+
+@app.get("/")
+def home():
+    return FileResponse("safemail/static/login.html")
 
 
 def analyze_attachments(email_id):
@@ -24,7 +84,7 @@ def analyze_attachments(email_id):
         SELECT filename, content_type, size_bytes, verdict, severity, score
         FROM attachments
         WHERE email_id = ?
-    """, email_id)
+    """, (email_id,))
 
     rows = cursor.fetchall()
     conn.close()
@@ -199,16 +259,17 @@ def analyze_email_route(request: EmailRequest):
 # ======================================================================
 
 
-@app.get("/imap/fetch_emails")
-def fetch_emails_route():
-    """bouchra 3amri hna t7abi tzidi route wa7doukhra diri imap/asemroute"""
-    pass  
 
 
-@app.get("/imap/email/{email_id}")
-def get_single_email_route(email_id: int):
-    """bouchra hadi part email"""
-    pass  
+@app.post("/imap/fetch/{account_id}")
+def route_fetch(account_id:int):
+
+    fetch_gmail_imap(account_id)
+
+    # scan attachments
+    #process_pending_attachments()
+
+    return {"status":"fetched"}
 
 
 
@@ -217,23 +278,60 @@ def get_single_email_route(email_id: int):
 # ======================================================================
 # Create user, login, list users…
 
+
+# -------- SIGNUP --------
+# -------- SIGNUP --------
 @app.post("/users/create")
-def create_user_route():
-    """ malek diri part ta3k hna ta3 creer user  mtnsaych ida kyn parametre tzidih"""
-    pass  
+def route_create_user(data: UserCreate):
+    try:
+        # Créer le user et récupérer son ID
+        user_id = create_user_db(data.username, data.email, data.password)
+
+        # Créer automatiquement un compte IMAP vide pour ce user
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO imap_accounts (user_id, account_email, app_password_encrypted)
+            VALUES (?, ?, ?)
+        """, (user_id, "", ""))  # email et password vides au départ
+        conn.commit()
+        conn.close()
+
+        return {"status": "created", "user_id": user_id}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
+
+
+
+
+
+
+
+
+
+
+
+# -------- LOGIN --------
 @app.post("/users/login")
-def login_user_route():
-    """malek"""
-    pass 
+def route_login(data: UserLogin):
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT id, password_hash FROM users WHERE username=?", (data.username,))
+        row = cur.fetchone()
+        conn.close()
 
+        if not row or not verify_password(data.password, row[1]):
+            raise HTTPException(status_code=401, detail="Invalid credentials")
 
-@app.get("/users")
-def list_users_route():
-    """hadi route lkbira ta3 list users ida 9drty zidiha ns79oha bch ntstiw"""
-    pass  
+        user_id = row[0]
+        return {"status":"ok", "user_id": user_id, "username": data.username}
 
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ======================================================================
@@ -251,3 +349,182 @@ def extract_attachments_route(email_id: int):
 def scan_attachment_route(attachment_id: int):
     """hna testi bvirustotal"""
     pass  
+
+
+
+
+
+#ROUTE — get mailbox
+@app.get("/emails/user/{user_id}")
+def list_emails(user_id: int):
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT e.id,
+               e.subject,
+               e.from_address,
+               e.to_addresses,
+               e.text_body,
+               e.is_quarantined,
+               e.processed
+        FROM emails_text e
+        JOIN imap_accounts a ON e.imap_account_id = a.id
+        WHERE a.user_id = ?
+        ORDER BY e.id DESC
+    """, (user_id,))
+
+    rows = cur.fetchall()
+    conn.close()
+
+    emails = []
+
+    for r in rows:
+        emails.append({
+            "id": r[0],
+            "subject": r[1],
+            "from_address": r[2],
+            "to_addresses": r[3],
+            "text_body": r[4],
+            "is_quarantined": bool(r[5]),
+            "processed": bool(r[6])
+        })
+
+    return emails
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@app.get("/emails/detail/{email_id}")
+def email_detail(email_id: int):
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT subject, from_address, to_addresses,
+               text_body, processed, is_quarantined, date_received
+        FROM emails_text
+        WHERE id = ?
+    """, (email_id,))
+
+    row = cur.fetchone()
+    conn.close()
+
+    if not row:
+        raise HTTPException(status_code=404, detail="Email not found")
+
+    subject, from_address, to_addresses, text_body, processed, is_quarantined, date_received = row
+
+    # ⚠️ classification seulement si déjà traité
+    if processed:
+        try:
+            report = classify_email(email_id, text_body)
+        except Exception as e:
+            report = {
+                "is_suspicious": False,
+                "reasons": [f"classifier error: {e}"],
+                "attachments": ""
+            }
+    else:
+        report = {
+            "is_suspicious": False,
+            "reasons": [],
+            "attachments": ""
+        }
+
+    return {
+        "id": email_id,
+        "subject": subject,
+        "from_address": from_address,
+        "to_addresses": to_addresses,
+        "text_body": text_body,
+        "date_received": date_received,
+        "is_suspicious": report["is_suspicious"],
+        "reasons": report["reasons"],
+        "attachments": report.get("attachments", ""),
+        "is_quarantined": bool(is_quarantined)
+    }
+
+
+
+@app.get("/emails/user/{user_id}")
+def get_user_emails(user_id: int):
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT id, subject, from_address, to_addresses,
+               text_body, is_quarantined, processed
+        FROM emails_text
+        WHERE user_id = ?
+        ORDER BY id DESC
+    """, (user_id,))
+
+    rows = cur.fetchall()
+    conn.close()
+
+    emails = []
+
+    for r in rows:
+        emails.append({
+            "id": r[0],
+            "subject": r[1],
+            "from_address": r[2],
+            "to_addresses": r[3],
+            "text_body": r[4],
+            "is_quarantined": bool(r[5]),
+            "processed": bool(r[6])
+        })
+
+    return emails
+
+
+
+
+@app.get("/imap/accounts/{user_id}")
+def get_imap_accounts(user_id:int):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT id, account_email FROM imap_accounts WHERE user_id=?", (user_id,))
+    rows = cur.fetchall()
+    conn.close()
+    return [{"id":r[0], "email": r[1]} for r in rows]
+
+
+
+
+
+
+
+
+@app.get("/emails/quarantine/{user_id}")
+def list_quarantine_emails(user_id:int):
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT e.id, e.subject, e.from_address
+        FROM emails_text e
+        JOIN imap_accounts a
+        ON e.imap_account_id=a.id
+        WHERE a.user_id=? AND e.is_quarantined=1
+    """,(user_id,))
+
+    rows = cur.fetchall()
+    conn.close()
+
+    return [{"id": r[0], "subject": r[1], "from_address": r[2]} for r in rows]

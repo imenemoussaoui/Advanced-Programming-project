@@ -1,0 +1,31 @@
+<h2>Créer un compte</h2>
+
+<input id="su" placeholder="username">
+<input id="se" placeholder="email">
+<input id="sp" type="password" placeholder="password">
+
+<button onclick="signup()">Créer</button>
+
+<script>
+async function signup(){
+await fetch("/users/create",{
+method:"POST",
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({
+username: su.value,
+email: se.value,
+password: sp.value
+})
+})
+alert("Compte créé")
+}
+
+
+
+let data = await res.json();
+
+if(res.ok){
+    localStorage.setItem("user_id", data.user_id); // indispensable pour fetch IMAP ensuite
+}
+
+</script>

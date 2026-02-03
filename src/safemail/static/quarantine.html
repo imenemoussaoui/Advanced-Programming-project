@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Quarantine Emails</title>
+<style>
+body { font-family: Arial; background:#eef2f7; padding:20px; }
+h2 { margin-bottom:20px; }
+table { width:100%; border-collapse: collapse; background:white; box-shadow:0 2px 8px rgba(0,0,0,0.08); }
+th, td { padding:10px; border-bottom:1px solid #eee; text-align:left; }
+th { background:#2c3e50; color:white; }
+tr:hover { background:#f5f8fc; cursor:pointer; }
+</style>
+</head>
+<body>
+<h2>📛 Quarantined Emails</h2>
+<table id="qtable">
+<thead>
+<tr>
+    <th>ID</th>
+    <th>Subject</th>
+    <th>From</th>
+    <th>Action</th>
+</tr>
+</thead>
+<tbody id="qbody">
+<tr><td colspan="4">Loading...</td></tr>
+</tbody>
+</table>
+
+<script>
+async function loadQuarantine(){
+    let uid = localStorage.getItem("user_id");
+    if(!uid){ alert("Login first"); return; }
+
+    let res = await fetch(`/emails/quarantine/${uid}`);
+    let data = await res.json();
+
+    let tbody = document.getElementById("qbody");
+    tbody.innerHTML = "";
+
+    if(data.length === 0){
+        tbody.innerHTML = "<tr><td colspan=4>No emails in quarantine</td></tr>";
+        return;
+    }
+
+    data.forEach(e=>{
+        let tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${e.id}</td>
+            <td>${e.subject}</td>
+            <td>${e.from_address}</td>
+            <td><button onclick="view(${e.id})">View</button></td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function view(id){
+    window.location.href = `inbox.html?id=${id}`; // redirige pour voir le détail
+}
+
+loadQuarantine();
+</script>
+</body>
+</html>
