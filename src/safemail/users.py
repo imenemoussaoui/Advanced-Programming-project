@@ -10,12 +10,18 @@ def verify_password(password: str, hash_value: str) -> bool:
     """Check password against stored hash"""
     return hash_password(password) == hash_value
 
-# --- Step 2: signup ---
+
+
+
+
+
+
 def create_user_db(username, email, password):
     conn = get_db_connection()
     cur = conn.cursor()
 
-    password_hash = password  # ou hash si tu veux
+    password_hash = hash_password(password)  
+
 
     # INSERT le user et récupérer son ID
     cur.execute("""
@@ -24,12 +30,13 @@ def create_user_db(username, email, password):
         VALUES (?, ?, ?)
     """, (username, email, password_hash))
 
-    user_id = cur.fetchone()[0]  # Récupère l'ID généré
+    user_id = cur.fetchone()[0]
 
     conn.commit()
     conn.close()
 
     return user_id
+
 
        
 

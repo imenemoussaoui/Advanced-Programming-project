@@ -276,27 +276,32 @@ def route_fetch(account_id:int):
 # ======================================================================
 #                      USERS ROUTES 
 # ======================================================================
-# Create user, login, list users…
 
 
-# -------- SIGNUP --------
+
 # -------- SIGNUP --------
 @app.post("/users/create")
 def route_create_user(data: UserCreate):
+    """
+    Crée un user + son compte IMAP directement.
+    data: username, email, password
+    """
     try:
-        # Créer le user et récupérer son ID
+        # 1️ Créer le user (mot de passe hashé)
         user_id = create_user_db(data.username, data.email, data.password)
 
-        # Créer automatiquement un compte IMAP vide pour ce user
+        # 2️ Créer le compte IMAP lié à ce user
+        # le mot de passe IMAP = mot de passe fourni (non hashé)
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
             INSERT INTO imap_accounts (user_id, account_email, app_password_encrypted)
             VALUES (?, ?, ?)
-        """, (user_id, "", ""))  # email et password vides au départ
+        """, (user_id, data.email, data.password))  # mot de passe IMAP lisible
         conn.commit()
         conn.close()
 
+        # 3️ Retour
         return {"status": "created", "user_id": user_id}
 
     except Exception as e:
@@ -317,21 +322,29 @@ def route_create_user(data: UserCreate):
 # -------- LOGIN --------
 @app.post("/users/login")
 def route_login(data: UserLogin):
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT id, password_hash FROM users WHERE username=?", (data.username,))
-        row = cur.fetchone()
-        conn.close()
+    conn = get_db_connection()
+    cur = conn.cursor()
 
-        if not row or not verify_password(data.password, row[1]):
-            raise HTTPException(status_code=401, detail="Invalid credentials")
+    # Récupère hash du user
+    cur.execute("SELECT id, password_hash FROM users WHERE username=?", (data.username,))
+    row = cur.fetchone()
+    conn.close()
 
-        user_id = row[0]
-        return {"status":"ok", "user_id": user_id, "username": data.username}
+    if not row:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    user_id, password_hash = row
+
+    # Vérification mot de passe hashé
+    if not verify_password(data.password, password_hash):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    return {
+        "status": "ok",
+        "user_id": user_id,
+        "username": data.username
+    }
+
 
 
 # ======================================================================
